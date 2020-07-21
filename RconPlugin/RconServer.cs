@@ -103,12 +103,17 @@ namespace RconPlugin
             if (_pwHash != null && hash.SequenceEqual(_pwHash))
             {
                 Log.Info($"{sender.RemoteEndPoint}: Authorized");
+		// Necessary to send an empty RESPONSE_VALUE before sending the AUTHRESPONSE, otherwise most RCON clients don´t realize AUTH has been successfully.
+		// See https://developer.valvesoftware.com/wiki/Source_RCON_Protocol#SERVERDATA_AUTH_RESPONSE
+		// >>  When the server receives an auth request, it will respond with an empty SERVERDATA_RESPONSE_VALUE, followed immediately by a SERVERDATA_AUTH_RESPONSE indicating whether authentication succeeded or failed.
+                sender.SendPacket(new RconPacket(packet.Id, PacketType.SERVERDATA_RESPONSE_VALUE, string.Empty));
                 sender.SendPacket(new RconPacket(packet.Id, PacketType.SERVERDATA_AUTHRESPONSE, string.Empty));
                 sender.IsAuthed = true;
             }
             else
             {
                 Log.Warn($"{sender.RemoteEndPoint}: Incorrect password attempt");
+                sender.SendPacket(new RconPacket(packet.Id, PacketType.SERVERDATA_RESPONSE_VALUE, string.Empty)); // same here by definition although most clients realized the wrong AUTH info
                 sender.SendPacket(new RconPacket(-1, PacketType.SERVERDATA_AUTHRESPONSE, string.Empty));
                 sender.IsAuthed = false;
             }
